@@ -1,7 +1,7 @@
 ﻿using CSharp_Database_Extension;
 using CSharp_Database_Extension.Entities.Validation.Abstractions.Bases;
 
-namespace CSM_Database_Testing.Abstractions.Bases;
+namespace CSharp_Database_Extension_Testing.Abstractions.Bases;
 
 /// <summary>
 ///     Represents an integration tests class for <see cref="IEntity"/> implementations.

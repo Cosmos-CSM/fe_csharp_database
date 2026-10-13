@@ -1,6 +1,6 @@
-﻿using CSM_Database_Testing.Disposing.Abstractions.Bases;
+﻿using CSharp_Database_Extension_Testing.Disposing.Abstractions.Bases;
 
-namespace CSM_Database_Testing.Disposing;
+namespace CSharp_Database_Extension_Testing.Disposing;
 
 /// <inheritdoc cref="TestingDisposerBase"/>
 public class TestingDisposer

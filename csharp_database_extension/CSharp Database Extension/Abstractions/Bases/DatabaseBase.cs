@@ -5,7 +5,7 @@ using CSharp_Database_Extension.Common.Enums;
 using CSharp_Database_Extension.Common.Errors;
 using CSharp_Database_Extension.Common.Models;
 using CSharp_Database_Extension.Common.Utils;
-using CSharp_Database_Extension.Entities.Abstractions.Interfaces;
+using CSharp_Database_Extension.Entities.Validation.Models;
 
 using CSharp_Extension.Common.Utils;
 
@@ -18,12 +18,12 @@ namespace CSharp_Database_Extension;
 /// <summary>
 ///     Represents a Database Model.
 /// </summary>
-/// <typeparam name="TDatabases">
+/// <typeparam name="TDatabase">
 ///     Type of the database model.
 /// </typeparam>
-public abstract partial class DatabaseBase<TDatabases>
+public abstract partial class DatabaseBase<TDatabase>
     : DbContext, IDatabase
-    where TDatabases : DbContext {
+    where TDatabase : DbContext {
 
     /// <inheritdoc/>
     public virtual string Signature { get; protected set; } = "";
@@ -34,13 +34,13 @@ public abstract partial class DatabaseBase<TDatabases>
     /// <summary>
     ///     Database model options.
     /// </summary>
-    public DatabaseOptions<TDatabases> Options { get; init; }
+    public DatabaseOptions<TDatabase> Options { get; init; }
 
     /// <summary>
     ///     Creates a new instance.
     /// </summary>
     public DatabaseBase() {
-        Options = new DatabaseOptions<TDatabases>();
+        Options = new DatabaseOptions<TDatabase>();
         CompleteOptions();
     }
 
@@ -50,7 +50,7 @@ public abstract partial class DatabaseBase<TDatabases>
     /// <param name="databaseOptions">
     ///     EF Database context options.
     /// </param>
-    public DatabaseBase(DatabaseOptions<TDatabases> databaseOptions)
+    public DatabaseBase(DatabaseOptions<TDatabase> databaseOptions)
         : base(databaseOptions.DbContextOptions ?? new()) {
         Options = databaseOptions;
 
@@ -141,19 +141,18 @@ public abstract partial class DatabaseBase<TDatabases>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
         string connectionString = Options.ConnectionOptions!.ConnectionString;
 
-        string assemblyNamespace = $"{GetType().Assembly.GetName().Name}.Migrations";
-
+        string migrationsAssembly = $"{GetType().Assembly.GetName().Name}.Migrations";
         switch (Options.Provider) {
             case DatabaseProviders.SQLServer:
                 optionsBuilder.UseSqlServer(
                         connectionString,
-                        builder => builder.MigrationsAssembly($"{assemblyNamespace}.SQLServer")
+                        builder => builder.MigrationsAssembly($"{migrationsAssembly}.SQLServer")
                     );
                 break;
             case DatabaseProviders.PostgreSQL:
                 optionsBuilder.UseNpgsql(
                         connectionString,
-                        builder => builder.MigrationsAssembly($"{assemblyNamespace}.PostgreSQL")
+                        builder => builder.MigrationsAssembly($"{migrationsAssembly}.PostgreSQL")
                     );
                 break;
         }
@@ -232,24 +231,6 @@ public abstract partial class DatabaseBase<TDatabases>
     protected virtual void DesignDatabase(ModelBuilder mBuilder) { }
 
     /// <summary>
-    ///     Completes missing <see cref="Options"/> values that are auto-loaded
-    ///     by system properties or values calculated at runtime.
-    /// </summary>
-    /// <remarks>
-    ///     Important process, is required to be called in each constructor of this class.
-    /// </remarks>
-    void CompleteOptions() {
-        Options.Signature ??= Signature;
-
-        // When current options provider is the default one.
-        if (Options.Provider == DatabaseProviders.PostgreSQL) {
-            Options.Provider = Provider;
-        }
-
-        Options.ConnectionOptions ??= DatabaseUtils.GetConnectionOptions(Signature, Options.ForTesting);
-    }
-
-    /// <summary>
     ///     Validate database entity models.
     /// </summary>
     /// <param name="strict">
@@ -269,20 +250,20 @@ public abstract partial class DatabaseBase<TDatabases>
             );
         }
 
-        Exception[] evResults = [];
+        EntityEvaluationFailure[] evResults = [];
         foreach (EntityBase entity in defs) {
-            Exception[] result = entity.EvaluateModel();
-            if (result.Length > 0 && logsOn) {
+            EntityEvaluationFailure[] modelFailures = entity.EvaluateModel();
+            if (modelFailures.Length > 0 && logsOn) {
                 ConsoleUtils.Warning(
                     "Wrong [Entity Model] definition",
                     new() {
                         { "Entity Model", entity.GetType().Name },
-                        { "Result", result },
+                        { "Result", modelFailures },
                     }
                 );
             }
 
-            evResults = [.. evResults, .. result];
+            evResults = [.. evResults, .. modelFailures];
         }
 
         if (evResults.Length > 0) {
@@ -296,6 +277,24 @@ public abstract partial class DatabaseBase<TDatabases>
             ConsoleUtils.Success($"[{GetType().Name}] Set validation succeeded");
 
         return true;
+    }
+
+    /// <summary>
+    ///     Completes missing <see cref="Options"/> values that are auto-loaded
+    ///     by system properties or values calculated at runtime.
+    /// </summary>
+    /// <remarks>
+    ///     Important process, is required to be called in each constructor of this class.
+    /// </remarks>
+    void CompleteOptions() {
+        Options.Signature ??= Signature;
+
+        // When current options provider is the default one.
+        if (Options.Provider == DatabaseProviders.PostgreSQL) {
+            Options.Provider = Provider;
+        }
+
+        Options.ConnectionOptions ??= DatabaseUtils.GetConnectionOptions(Signature, Options.ForTesting);
     }
 
     /// <summary>
@@ -333,7 +332,7 @@ public abstract partial class DatabaseBase<TDatabases>
     }
 }
 
-/// <inheritdoc cref="EntityBase"/>
+/// <inheritdoc cref="EntityBase{TStatus, TUser}"/>
 public abstract partial class EntityBase {
 
     /// <summary>

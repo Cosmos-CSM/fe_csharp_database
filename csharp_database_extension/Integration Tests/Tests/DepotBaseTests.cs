@@ -1,7 +1,7 @@
 ﻿using CSharp_Database_Extension.Depots.Models;
 using CSharp_Database_Extension.Depots.Models.Structs;
 
-using CSM_Database_Testing.Abstractions.Bases;
+using CSharp_Database_Extension_Testing.Abstractions.Bases;
 
 using DatabaseProxy;
 using DatabaseProxy.Entities;

@@ -8,13 +8,13 @@ using CSharp_Database_Extension.Depots.Abstractions.Interfaces;
 using CSharp_Database_Extension.Depots.Models;
 using CSharp_Database_Extension.Depots.ViewFilters;
 
-using CSM_Database_Testing.Disposing.Abstractions.Bases;
-using CSM_Database_Testing.Managers;
+using CSharp_Database_Extension_Testing.Disposing.Abstractions.Bases;
+using CSharp_Database_Extension_Testing.Managers;
 
 using Xunit;
 using Xunit.Sdk;
 
-namespace CSM_Database_Testing.Abstractions.Bases;
+namespace CSharp_Database_Extension_Testing.Abstractions.Bases;
 
 /// <summary>
 ///     Represents a testing base class for a data source depot.
@@ -196,7 +196,7 @@ public abstract class DepotIntegrationTestsBase<TEntity, TDepot, TDatabase>
     ///     This <see cref="IEntity"/> instance collection is created but not stored in the database.
     /// </remarks>
     protected async Task<TEntity[]> Sampling(int Count) {
-        List<TEntity> samples = new List<TEntity>();
+        List<TEntity> samples = [];
         for (int i = 0; i < Count; i++) {
             samples.Add(await TestingStoreManager.RunEntityFactory(EntityFactory));
         }

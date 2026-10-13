@@ -9,13 +9,20 @@ public abstract class RelationAttributeBase
     /// <inheritdoc/>
     public string? Name { get; set; }
 
+    /// <inheritdoc/>
+    public bool IsCrossDatabase { get; set; }
+
     /// <summary>
     ///     Creates a new instance.
     /// </summary>
     /// <param name="name">
     ///     Relation's name.
     /// </param>
-    public RelationAttributeBase(string? name = null) {
+    /// <param name="isCrossDatabase">
+    ///     Whether the relation references an entity on a different database.
+    /// </param>
+    public RelationAttributeBase(string? name = null, bool isCrossDatabase = false) {
         Name = name;
+        IsCrossDatabase = isCrossDatabase;
     }
 }

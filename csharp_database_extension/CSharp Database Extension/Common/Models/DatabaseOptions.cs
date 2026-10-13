@@ -1,4 +1,6 @@
-﻿using CSharp_Database_Extension.Common.Enums;
+﻿using System.Reflection;
+
+using CSharp_Database_Extension.Common.Enums;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +16,11 @@ public partial record DatabaseOptions<TDatabase>
     ///     Database signature.
     /// </summary>
     public string? Signature { get; set; }
+
+    /// <summary>
+    ///     Migrations assembly to use.
+    /// </summary>
+    public Assembly? Migrations { get; set; } 
 
     /// <summary>
     ///     Database provider.

@@ -2,16 +2,27 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 
-using CSharp_Database_Extension.Entities.Abstractions.Interfaces;
 using CSharp_Database_Extension.Entities.Validation.Abstractions.Bases;
+using CSharp_Database_Extension.Entities.Validation.Models;
 
 using CSharp_Extension.Common.Abstractions.Bases;
 
 namespace CSharp_Database_Extension;
 
-/// <summary>
-///     Represents a business entity.
-/// </summary>
+/// <inheritdoc cref="IEntity{TStatus, TUser}"/>
+public abstract partial class EntityBase<TStatus, TUser>
+    : EntityBase, IEntity<TStatus, TUser>
+    where TStatus : class, IEntity<TStatus, TUser>
+    where TUser : class, IEntity<TStatus, TUser> {
+
+    /// <inheritdoc/>
+    public TStatus SystemStatus { get; set; } = default!;
+
+    /// <inheritdoc/>
+    public TUser EntityOwner { get; set; } = default!;
+}
+
+/// <inheritdoc cref="IEntity"/>
 public abstract partial class EntityBase
     : ObjectBase, IEntity {
 
@@ -27,18 +38,17 @@ public abstract partial class EntityBase
 
     #endregion
 
-
     /// <inheritdoc/>
     public long Id { get; set; }
-
-    /// <inheritdoc/>
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc/>
     public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     ///     Creates a new instance.
@@ -48,8 +58,7 @@ public abstract partial class EntityBase
     }
 
     /// <inheritdoc/>
-    protected void Evaluate() {
-
+    public void EvaluateData() {
         foreach (PropertyInfo property in GetType().GetProperties()) {
 
             IEnumerable<ValidatorBase> attributes = property.GetCustomAttributes<ValidatorBase>();
@@ -57,27 +66,37 @@ public abstract partial class EntityBase
                 return;
 
             foreach (ValidatorBase validator in attributes) {
-                try {
-                    validator.Validate(this);
-                } catch {
-
-                }
+                validator.Validate(this);
             }
         }
     }
 
     /// <inheritdoc/>
-    public void EvaluateRead() {
-        Evaluate();
-    }
+    public EntityEvaluationFailure[] EvaluateModel() {
 
-    /// <inheritdoc/>
-    public void EvaluateWrite() {
-        Evaluate();
-    }
+        Type modelType = GetType();
+        PropertyInfo[] modelProps = modelType.GetProperties();
 
-    /// <inheritdoc/>
-    public Exception[] EvaluateModel() {
-        return [];
+        List<EntityEvaluationFailure> failures = [];
+        foreach (PropertyInfo property in modelProps) {
+
+            IEnumerable<ValidatorBase> attributes = property.GetCustomAttributes<ValidatorBase>();
+            if (!attributes.Any())
+                continue;
+
+            foreach (ValidatorBase validator in attributes) {
+                if (!validator.ValidateType(modelType)) {
+                    failures.Add(
+                            new EntityEvaluationFailure {
+                                Property = property,
+                                Validator = validator,
+                                Type = EntityEvaluationFailures.WRONG_VALIDATOR_TYPE
+                            }
+                        );
+                }
+            }
+        }
+
+        return [.. failures];
     }
 }

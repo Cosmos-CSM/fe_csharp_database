@@ -10,7 +10,7 @@ public class EntityRelationAttribute
     : RelationAttributeBase {
 
     /// <inheritdoc/>
-    public EntityRelationAttribute(string? name = null)
-        : base(name) {
+    public EntityRelationAttribute(string? name = null, bool isCrossDatabase = false)
+        : base(name, isCrossDatabase) {
     }
 }

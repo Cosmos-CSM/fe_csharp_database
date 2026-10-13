@@ -1,15 +1,15 @@
 ﻿using CSharp_Database_Extension;
 using CSharp_Database_Extension.Common.Models;
 
-using CSharp_Extension.Common.Extensions;
+using CSharp_Database_Extension_Testing.Abstractions.Interfaces;
 
-using CSM_Database_Testing.Abstractions.Interfaces;
+using CSharp_Extension.Common.Extensions;
 
 using Microsoft.EntityFrameworkCore;
 
 using Xunit;
 
-namespace CSM_Database_Testing.Abstractions.Bases;
+namespace CSharp_Database_Extension_Testing.Abstractions.Bases;
 
 /// <summary>
 ///     Represents a testing class for a Database context.

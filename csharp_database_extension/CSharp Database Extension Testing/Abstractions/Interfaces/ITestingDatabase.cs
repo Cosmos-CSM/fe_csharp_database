@@ -1,4 +1,4 @@
-﻿namespace CSM_Database_Testing.Abstractions.Interfaces;
+﻿namespace CSharp_Database_Extension_Testing.Abstractions.Interfaces;
 /// <summary>
 ///     Interface Quality for [MigrationDatabases].
 ///     

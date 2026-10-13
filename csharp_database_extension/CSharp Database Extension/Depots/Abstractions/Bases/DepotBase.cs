@@ -124,7 +124,7 @@ public abstract class DepotBase<TDatabase, TEntity>
         TEntity instEntity = entity;
 
         instEntity.Timestamp = DateTime.UtcNow;
-        instEntity.EvaluateWrite();
+        instEntity.EvaluateData();
 
         instEntity = await DatabaseUtils.SanitizeEntity(_db, instEntity);
         await _dbSet.AddAsync(instEntity);
@@ -171,7 +171,7 @@ public abstract class DepotBase<TDatabase, TEntity>
             .FirstOrDefaultAsync()
             ?? throw new DepotError<TEntity>(DepotErrorEvents.UNFOUND, $"{nameof(IEntity.Id)} = {id}");
 
-        entity.EvaluateRead();
+        entity.EvaluateData();
         return entity;
     }
 
@@ -230,7 +230,7 @@ public abstract class DepotBase<TDatabase, TEntity>
         List<EntityError<TEntity>> errors = [];
         foreach (TEntity item in resultItems) {
             try {
-                item.EvaluateRead();
+                item.EvaluateData();
                 successes.Add(item);
             } catch (Exception exception) {
                 EntityError<TEntity> error = new(EntityErrorEvents.READ_VALIDATION_FAILED, item, exception);

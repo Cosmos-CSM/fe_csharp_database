@@ -2,14 +2,17 @@
 
 namespace CSharp_Database_Extension.Common.Attributes.Abstractions.Interfaces;
 
-
 /// <summary>
 ///     Represents an <see cref="IEntity"/> relation attribute.
 /// </summary>
 public interface IRelationAttribute {
-
     /// <summary>
     ///     Relation name.
     /// </summary>
-    public string? Name { get; set; }
+    string? Name { get; set; }
+
+    /// <summary>
+    ///     Wheter this relation references an entity on a different database.
+    /// </summary>
+    bool IsCrossDatabase { get; set; }
 }

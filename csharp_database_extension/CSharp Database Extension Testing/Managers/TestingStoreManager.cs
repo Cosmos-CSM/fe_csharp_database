@@ -1,16 +1,16 @@
 ﻿using CSharp_Database_Extension;
 using CSharp_Database_Extension.Common.Utils;
 
-using CSharp_Extension.Common.Utils;
+using CSharp_Database_Extension_Testing.Abstractions.Bases;
+using CSharp_Database_Extension_Testing.Disposing;
+using CSharp_Database_Extension_Testing.Disposing.Abstractions.Bases;
+using CSharp_Database_Extension_Testing.Disposing.Abstractions.Interfaces;
 
-using CSM_Database_Testing.Abstractions.Bases;
-using CSM_Database_Testing.Disposing;
-using CSM_Database_Testing.Disposing.Abstractions.Bases;
-using CSM_Database_Testing.Disposing.Abstractions.Interfaces;
+using CSharp_Extension.Common.Utils;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace CSM_Database_Testing.Managers;
+namespace CSharp_Database_Extension_Testing.Managers;
 
 /// <summary>
 ///     Represents a testing data storing methods manager.

@@ -3,12 +3,12 @@
 using CSharp_Database_Extension;
 using CSharp_Database_Extension.Entities.Abstractions.Interfaces;
 
-using CSM_Database_Testing.Disposing.Abstractions.Interfaces;
+using CSharp_Database_Extension_Testing.Disposing.Abstractions.Interfaces;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
-namespace CSM_Database_Testing.Disposing.Abstractions.Bases;
+namespace CSharp_Database_Extension_Testing.Disposing.Abstractions.Bases;
 
 /// <summary>
 ///     Database context factory delegate.

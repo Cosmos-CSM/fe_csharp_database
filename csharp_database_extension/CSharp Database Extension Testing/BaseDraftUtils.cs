@@ -3,7 +3,7 @@ using CSharp_Database_Extension.Entities.Abstractions.Interfaces;
 
 using CSharp_Extension.Common.Utils;
 
-namespace CSM_Database_Testing;
+namespace CSharp_Database_Extension_Testing;
 
 /// <summary>
 ///     Provide utils methods for entities bases drafting

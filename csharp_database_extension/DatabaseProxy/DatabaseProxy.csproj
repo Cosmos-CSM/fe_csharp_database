@@ -17,10 +17,4 @@
     <ProjectReference Include="..\CSharp Database Extension\CSharp Database Extension.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="csmdq.dev.connection.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

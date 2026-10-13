@@ -2,11 +2,42 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
+using CSharp_Database_Extension.Common.Attributes;
+using CSharp_Database_Extension.Entities.Validation.Models;
+
 using CSharp_Extension.Convertion.Abstractions.Interfaces;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace CSharp_Database_Extension;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
+
+
+/// <summary>
+///    Represents a business entity model with status relation.
+/// </summary>
+/// <typeparam name="TStatus">
+///     Type of the status entity model.
+/// </typeparam>
+/// <typeparam name="TUser">
+///     Type of the user entity model.
+/// </typeparam>
+public partial interface IEntity<TStatus, TUser>
+    : IEntity
+    where TStatus : class, IEntity<TStatus, TUser>
+    where TUser : class, IEntity<TStatus, TUser> {
+
+    /// <summary>
+    ///     System level entity status. 
+    /// </summary>
+    [NotMapped, EntityRelation(IsCrossDatabase = true)]
+    TStatus SystemStatus { get; set; }
+
+    /// <summary>
+    ///     Last user that owned this entity.
+    /// </summary>
+    [NotMapped, EntityRelation(IsCrossDatabase = true)]
+    TUser EntityOwner { get; set; }
+}
 
 /// <summary>
 ///     Represents a business entity model.
@@ -15,18 +46,18 @@ public partial interface IEntity
     : IConverterVariant {
 
     /// <summary>
-    ///     Type of the <see cref="Abstractions.Interfaces.IDatabase"/> implementation that stores this <see cref="IEntity"/> implementation.
+    ///     Database that owns this entity model.
     /// </summary>
     [JsonIgnore, NotMapped]
     Type Database { get; init; }
 
     /// <summary>
-    ///     Unique data storages direct pointer identifier.
+    ///     Database identifier.
     /// </summary>
     long Id { get; set; }
 
     /// <summary>
-    ///     Entity instance name.
+    ///     Entity name.
     /// </summary>
     /// <remarks>
     ///     Length min 1, max 200.
@@ -35,48 +66,26 @@ public partial interface IEntity
     string Name { get; set; }
 
     /// <summary>
-    ///     Entity instance description.
+    ///     Entity description.
     /// </summary>
     string? Description { get; set; }
 
     /// <summary>
-    ///     Time mark for the last time this <see cref="IEntity"/> got created and stored into data storage sources.
+    ///     Last entity change timestamp.
     /// </summary>
     DateTime Timestamp { get; set; }
 
     /// <summary>
-    ///     This method evaluates the current record after being read from [Database] to determine
-    ///     if all ist content is correctly reviewed, this is done because there might be a posibility that some users
-    ///     or administration pushes data directly into the [Database] bypassing the system programmed validations.
-    ///    
-    ///     <para>
-    ///         This method can throw directly exceptions due to this kind of integrity methods are 
-    ///         strict and must mandatory break any kind of operation into the system to prevent
-    ///         wrong usage and handling of corrupt data.
-    ///     </para>
+    ///     Evaluates current entity data integrity at Read or Write operations in database. This prevents possible user level direct databases
+    ///     modifications.
     /// </summary>
-    void EvaluateRead();
+    void EvaluateData();
 
     /// <summary>
-    ///     This method evaluates the current record to be stored in the [Database] storage system,
-    ///     this helps to keep the integrity of our data into our storage systems.
-    ///     
-    ///     <para>
-    ///         This method can throw directly exceptions due to this kind of integrity methods are 
-    ///         strict and must mandatory break any kind of operation into the system to prevent
-    ///         wrong usage and handling of corrupt data.
-    ///     </para>
-    /// </summary>
-    void EvaluateWrite();
-
-    /// <summary>
-    ///     This method is used to evaluate the model definition, this means will evaluate
-    ///     if the <see cref="EvaluateRead"/> and <see cref="EvaluateWrite"/> operations work as expected
-    ///     before the system start its engine, this function might break the system rawSet up and stop advising
-    ///     about the found exceptions.
+    ///     Evaluate that entity model is correctly configured.
     /// </summary>
     /// <returns>
-    ///     Collection of exceptions found at definition evaluation.
+    ///     Evaluation failures.
     /// </returns>
-    Exception[] EvaluateModel();
+    EntityEvaluationFailure[] EvaluateModel();
 }

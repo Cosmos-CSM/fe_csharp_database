@@ -1,10 +1,10 @@
 ﻿using CSharp_Database_Extension;
 
-using CSM_Database_Testing.Disposing;
-using CSM_Database_Testing.Disposing.Abstractions.Bases;
-using CSM_Database_Testing.Managers;
+using CSharp_Database_Extension_Testing.Disposing;
+using CSharp_Database_Extension_Testing.Disposing.Abstractions.Bases;
+using CSharp_Database_Extension_Testing.Managers;
 
-namespace CSM_Database_Testing.Abstractions.Bases;
+namespace CSharp_Database_Extension_Testing.Abstractions.Bases;
 
 /// <summary>
 ///     Public Delegate for Asynchronous [Entity] factory [Quality] purposes.
