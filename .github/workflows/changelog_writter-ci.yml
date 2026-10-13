@@ -1,0 +1,27 @@
+name: CHANGELOG Writer CI
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - "main"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check release-please config exists
+        run: |
+          if [ ! -f "release-please-config.json" ]; then
+            echo "ERROR: release-please-config.json not found."
+            exit 1
+          fi
+
+      - uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: simple
