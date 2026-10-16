@@ -64,5 +64,6 @@ jobs:
           dotnet build --no-restore --configuration Release
 
       - name: Run tests
+        working-directory: ${{ env.WDIR }}
         run: |
           dotnet test "./Unit Tests/Unit Tests.csproj" --no-build --configuration Release --verbosity normal
