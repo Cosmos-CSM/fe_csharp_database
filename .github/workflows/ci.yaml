@@ -1,4 +1,4 @@
-name: CI CSharp Database Extension 
+name: CI
 
 # CI Workflow checks that solution builds, unit tests passes and code-health. 
 
@@ -16,6 +16,8 @@ on:
 
 jobs:
   unit_testing:
+    env: 
+      WDIR: csharp_database_extension
     name: Unit Testing
     runs-on: ubuntu-latest
     concurrency:
@@ -53,9 +55,11 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
+        working-directory: ${{ env.WDIR }}
         run: dotnet restore
 
       - name: Build solution
+        working-directory: ${{ env.WDIR }}
         run: |
           dotnet build --no-restore --configuration Release
 
