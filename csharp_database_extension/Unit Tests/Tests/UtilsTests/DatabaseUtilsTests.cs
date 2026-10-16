@@ -1,4 +1,4 @@
-﻿using CSM_Database_Core.Core.Utils;
+﻿using CSharp_Database_Extension.Common.Utils;
 
 using DatabaseProxy.Entities;
 

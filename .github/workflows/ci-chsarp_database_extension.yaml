@@ -1,9 +1,18 @@
-name: Unit Testing
+name: CI CSharp Database Extension 
+
+# CI Workflow checks that solution builds, unit tests passes and code-health. 
 
 on:
   pull_request:
-    branches: [ dev, main ]
-    types: [ opened, synchronize, reopened ]
+    branches: [ 
+      dev, 
+      main,
+    ]
+    types: [ 
+      opened, 
+      reopened, 
+      synchronize, 
+    ]
 
 jobs:
   unit_testing:
@@ -19,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔑 Configure NuGet to use GitHub Packages
+      - name: Setup GitHub source packages.
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.PUBLISH_PAT }}
         run: |
@@ -33,7 +42,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '10.0.x'    # ← install .NET 8
+          dotnet-version: '10.0.x'
 
       - name: Cache NuGet packages
         uses: actions/cache@v3
