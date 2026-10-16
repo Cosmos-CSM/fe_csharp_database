@@ -141,18 +141,25 @@ public abstract partial class DatabaseBase<TDatabase>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
         string connectionString = Options.ConnectionOptions!.ConnectionString;
 
-        string migrationsAssembly = $"{GetType().Assembly.GetName().Name}.Migrations";
         switch (Options.Provider) {
             case DatabaseProviders.SQLServer:
                 optionsBuilder.UseSqlServer(
                         connectionString,
-                        builder => builder.MigrationsAssembly($"{migrationsAssembly}.SQLServer")
+                        builder => {
+                            if (Options.Migrations is not null) {
+                                builder.MigrationsAssembly(Options.Migrations);
+                            }
+                        }
                     );
                 break;
             case DatabaseProviders.PostgreSQL:
                 optionsBuilder.UseNpgsql(
                         connectionString,
-                        builder => builder.MigrationsAssembly($"{migrationsAssembly}.PostgreSQL")
+                        builder => {
+                            if(Options.Migrations is not null) {
+                                builder.MigrationsAssembly(Options.Migrations);
+                            }
+                        }
                     );
                 break;
         }
