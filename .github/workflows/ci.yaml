@@ -1,28 +1,23 @@
 name: CI
 
-# CI Workflow checks that solution builds, unit tests passes and code-health. 
-
 on:
+  workflow_dispatch:
+
   pull_request:
-    branches: [ 
-      dev, 
-      main,
-    ]
-    types: [ 
-      opened, 
-      reopened, 
-      synchronize, 
-    ]
+    branches: [dev, main]
+    types: [opened, reopened, synchronize]
 
 jobs:
   unit_testing:
-    env: 
-      WDIR: csharp_database_extension
     name: Unit Testing
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+
+    env:
+      WDIR: csharp_database_extension
+      TEST_PROJECT: "Unit Tests/Unit Tests.csproj"
 
     steps:
       - name: Checkout code
@@ -30,13 +25,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup GitHub source packages.
+      - name: Configure NuGet (GitHub Packages)
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.PUBLISH_PAT }}
         run: |
           dotnet nuget add source \
             "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-            --name "github" \
+            --name github \
             --username ${{ github.actor }} \
             --password "$NUGET_AUTH_TOKEN" \
             --store-password-in-clear-text
@@ -51,19 +46,59 @@ jobs:
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          restore-keys: ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
         working-directory: ${{ env.WDIR }}
         run: dotnet restore
 
-      - name: Build solution
+      - name: Enforce code formatting (EditorConfig)
         working-directory: ${{ env.WDIR }}
-        run: |
-          dotnet build --no-restore --configuration Release
+        run: dotnet format --verify-no-changes
+
+      - name: Build with analyzers (warnaserror)
+        working-directory: ${{ env.WDIR }}
+        run: dotnet build --no-restore --configuration Release -warnaserror
 
       - name: Run tests
         working-directory: ${{ env.WDIR }}
+        run: dotnet test "$TEST_PROJECT" --no-build --configuration Release --verbosity normal
+
+      - name: Dependency Review (security)
+        uses: actions/dependency-review-action@v4
+
+      - name: Secret Scan
+        uses: gitleaks/gitleaks-action@v3
+
+
+  code_analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure NuGet (GitHub Packages)
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.PUBLISH_PAT }}
         run: |
-          dotnet test "./Unit Tests/Unit Tests.csproj" --no-build --configuration Release --verbosity normal
+          dotnet nuget add source \
+            "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --name github \
+            --username ${{ github.actor }} \
+            --password "$NUGET_AUTH_TOKEN" \
+            --store-password-in-clear-text
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3

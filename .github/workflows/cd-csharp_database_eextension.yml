@@ -1,15 +1,13 @@
-name: Publish CSM Foundation Database Testing
+name: CD CSharp Database Extension
 
 on:
-  # 1) Manual trigger in the Actions tab
   workflow_dispatch:
   
-  # 2) Push to main, but only if files under the folder change
   push:
     branches:
       - main
     paths:
-      - 'CSM Database Testing/**'
+      - 'CSM Database Core/**'
 
 permissions:
   contents: read
@@ -20,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CS_PROJECT_PATH: 'CSM Database Testing/CSM Database Testing.csproj'
+      CS_PROJECT_PATH: 'CSM Database Core/CSM Database Core.csproj'
 
     steps:
       - name: 🔄 Checkout repo
@@ -69,3 +67,5 @@ jobs:
             --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             --api-key "${{ secrets.PUBLISH_PAT }}" \
             --skip-duplicate
+
+
