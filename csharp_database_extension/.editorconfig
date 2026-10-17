@@ -4,6 +4,7 @@ root = true
 # C# files
 [*.cs]
 dotnet_diagnostic.IDE0058.severity = none
+csharp_new_line_end_of_line = ignore
 
 #### Core EditorConfig Options ####
 
@@ -263,4 +264,3 @@ dotnet_style_require_accessibility_modifiers = omit_if_default:silent
 dotnet_style_allow_statement_immediately_after_block_experimental = true:silent
 dotnet_style_allow_multiple_blank_lines_experimental = true:silent
 dotnet_code_quality_unused_parameters = all:silent
-dotnet_diagnostic.end_of_line.severity = none

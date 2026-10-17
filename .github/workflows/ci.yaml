@@ -70,7 +70,6 @@ jobs:
       - name: Secret Scan
         uses: gitleaks/gitleaks-action@v3
 
-
   code_analyze:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
