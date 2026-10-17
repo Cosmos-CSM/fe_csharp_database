@@ -8,6 +8,17 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
+  style_analyze:
+    name: Code Analyze
+    runs-on: ubuntu-latest
+
+    steps: 
+      - name: Formatting style
+        run: dotnet format style --verify-no-changes
+
+      - name: Formatting analyzer
+        run: dotnet format analyzers --verify-no-changes
+
   unit_testing:
     name: Unit Testing
     runs-on: ubuntu-latest
@@ -94,14 +105,3 @@ jobs:
         
       - name: Dependency Review (security)
         uses: actions/dependency-review-action@v4
-
-  style_analyze:
-    name: Code Analyze
-    runs-on: ubuntu-latest
-
-    steps: 
-      - name: Formatting style
-        run: dotnet format style --verify-no-changes
-
-      - name: Formatting analyzer
-        run: dotnet format analyzers --verify-no-changes 
