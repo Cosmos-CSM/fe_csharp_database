@@ -1,0 +1,7 @@
+{
+    "version": "0.0.0",
+    "packages": [
+        "csharp_database_extension/CSharp Database Extension",
+        "csharp_database_extension/CSharp Database Extension Testing"
+    ]
+}
