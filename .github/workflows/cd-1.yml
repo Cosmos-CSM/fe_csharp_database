@@ -1,0 +1,74 @@
+name: CD 1
+
+# This workflow supports the first phase of delvier process, when a PR is opened pointing [main] branch, will trigger validations.
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches: 
+        - main
+    types:
+        - opened
+        - reopened
+        - synchronize
+
+jobs:
+  validate-source:
+    name: Validate Source Branch
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event.pull_request.head.ref == 'dev'
+
+    steps: 
+      - run: echo "Valid PR source branch [dev]" 
+  
+  compare-versions: 
+    needs: validate-source
+    name: Compare Versions 
+    runs-on: ubuntu-latest
+
+    steps: 
+      - name: CheckOut Base 
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: base
+
+      - name: CheckOut Head
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          path: head
+
+      - name: Read Base version
+        id: base_version
+        run: |
+          VERSION=$(jq -r '.version' base/csmpackage.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Read Head version
+        id: head_version
+        run: |
+          VERSION=$(jq -r '.version' head/csmpackage.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        run: |
+          BASE="${{ steps.base_version.outputs.version }}"
+          HEAD="${{ steps.head_version.outputs.version }}"
+
+          echo "Base version: $BASE"
+          echo "Head version: $HEAD"
+
+          if [ "$BASE" = "$HEAD" ]; then
+            echo "Package metadata versions are not bumped"
+            exit 1
+          fi
+
+          echo "Versions bumped correctly"
+
+  
+
+    
