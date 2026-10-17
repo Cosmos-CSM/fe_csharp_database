@@ -105,7 +105,7 @@ jobs:
       security-events: write 
 
     env:
-      WDIR: csharp_database_extension
+      WDIR: ./csharp_database_extension
 
     steps: 
       - name: Formatting style
