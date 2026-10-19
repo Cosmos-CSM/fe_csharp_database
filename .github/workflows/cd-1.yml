@@ -70,40 +70,6 @@ jobs:
         run: |
           VERSION=$(jq -r '.version' base/csmpackage.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Compare Base Version.
-        run: |
-          set -euo pipefail
-
-          BRANCH="${{ github.head_ref }}"
-          echo "PR head branch: $BRANCH"
-
-          # Bash-compatible regex:
-          #  - prefix vbump_ or vbump-
-          #  - capture semver: major.minor.patch
-          #  - optional pre-release starting with - (e.g. -alpha, -rc.1)
-          #  - optional build metadata starting with + (e.g. +build.1)
-          REGEX='^vbump[_-]([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z._-]+)?(\+[0-9A-Za-z._-]+)?)$'
-
-          if [[ $BRANCH =~ $REGEX ]]; then
-            BRANCH_VER="${BASH_REMATCH[1]}"
-            echo "Extracted version from branch: $BRANCH_VER"
-          else
-            echo "Branch name does not match required pattern: vbump_{version} or vbump-{version}"
-            echo "Examples: vbump_1.2.3, vbump-1.2.3-alpha, vbump_1.2.3+build.1"
-            exit 1
-          fi
-
-          BASE_VER="${{ steps.base_version.outputs.version }}"
-          echo "Base version from step: $BASE_VER"
-
-          if [ "$BRANCH_VER" = "$BASE_VER" ]; then
-            echo "Version matches: $BRANCH_VER"
-          else
-            echo "Version mismatch: branch has '$BRANCH_VER' but base metadata is '$BASE_VER'"
-            exit 1
-          fi
-        shell: bash 
           
 
       - name: Read Head version
@@ -114,14 +80,35 @@ jobs:
 
       - name: Compare versions
         run: |
+          set -euo pipefail
+
           BASE="${{ steps.base_version.outputs.version }}"
           HEAD="${{ steps.head_version.outputs.version }}"
+          BRANCH="${{ github.head_ref }}"
+          REGEX='^vbump[_-]([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z._-]+)?(\+[0-9A-Za-z._-]+)?)$'
 
           echo "Base version: $BASE"
           echo "Head version: $HEAD"
+          echo "Head Branch: $BRANCH"
 
           if [ "$BASE" = "$HEAD" ]; then
-            echo "Package metadata versions are not bumped"
+            echo "Package metadata version isn't bumped"
+            exit 1
+          fi
+
+          if [[ $BRANCH =~ $REGEX ]]; then
+            BRANCH_VER="${BASH_REMATCH[1]}"
+            echo "Extracted version from branch: $BRANCH_VER"
+          else
+            echo "Branch name does not match required pattern: vbump_{version} or vbump-{version}"
+            echo "Examples: vbump_1.2.3, vbump-1.2.3-alpha, vbump_1.2.3+build.1"
+            exit 1
+          fi
+
+          if [ "$BRANCH_VER" = "$HEAD" ]; then
+            echo "Version match"
+          else
+            echo "Version mismatch: branch has '$BRANCH_VER' but metadata is '$HEAD'"
             exit 1
           fi
 
