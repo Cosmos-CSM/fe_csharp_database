@@ -51,6 +51,28 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           path: head
 
+      - name: Prevent Merges 
+        run: |
+          set -euo pipefail
+          HEAD_REF="${{ github.head_ref }}"
+          echo "Head Branch: $HEAD_REF"
+
+          # Regex: vbump_1.2.3 or vbump_1.2.3-beta etc.
+
+          if [ [ "$HEAD_REF" == "dev" ] ]
+            echo "Cannot merge into main from dev branch"
+            exit 1.
+          fi
+
+          if [[ "$HEAD_REF" =~ ^vbump_[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._-]+)?$ ]]; then
+            echo "Name matches version bump"
+            exit 0
+          else
+            echo "Branch name does NOT match required pattern: vbump_{version}"
+            echo "Expected example: vbump_{version}"
+            exit 1
+          fi
+
       - name: Read Base version
         id: base_version
         run: |
