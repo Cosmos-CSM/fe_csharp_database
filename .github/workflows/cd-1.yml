@@ -85,7 +85,7 @@ jobs:
           PACKAGES=$(jq -r '.packages[]' head/csmpackage.json)
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "packages=$PACKAGES_JSON" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
 
   generate_release_docs:
     name: Generate Release Documentation (Release-Notes & Changelog)
