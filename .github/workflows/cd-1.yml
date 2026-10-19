@@ -168,6 +168,7 @@ jobs:
       - name: Build PR Summary
         id: pr_summary
         run: |
+          |
           set -euo pipefail
 
           PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -176,21 +177,58 @@ jobs:
 
           echo "Fetching PR metadata for #$PR_NUMBER"
 
-          PR_DATA=$(curl -s \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
+          PR_DATA=$(curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER") || true
 
           TITLE=$(echo "$PR_DATA" | jq -r '.title // "No title"')
           BODY=$(echo "$PR_DATA" | jq -r '.body // "No description provided."')
           AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login // "unknown"')
-          LABELS=$(echo "$PR_DATA" | jq -r '[.labels[].name] | join(", ") // empty')
-          FILES_JSON=$(curl -s \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files")
+          LABELS=$(echo "$PR_DATA" | jq -r '(.labels // []) | map(.name) | join(", ")')
+
+          FILES_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files") || true
           FILES=$(echo "$FILES_JSON" | jq -r '.[].filename' || true)
 
-          COMMITS_JSON=$(curl -s \
-            -H "Authorization: Bearer $TOKEN" \
-            -
+          COMMITS_JSON=$(curl -s -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/commits") || true
+          COMMITS=$(echo "$COMMITS_JSON" | jq -r '.[].commit.message' || true)
+
+          SUMMARY_FILE="pr_summary.md"
+
+          {
+            echo "### PR Summary"
+            echo ""
+            echo "**Title:** $TITLE"
+            echo ""
+            echo "**Author:** @$AUTHOR"
+            echo ""
+            echo "**Description:**"
+            echo ""
+            echo "$BODY"
+            echo ""
+            if [ -n "$LABELS" ]; then
+              echo "**Labels:** $LABELS"
+            else
+              echo "**Labels:** None"
+            fi
+            echo ""
+            echo "### Changes"
+            echo ""
+            echo "**Files modified:**"
+            if [ -n "$FILES" ]; then
+              echo "$FILES" | sed 's/^/- /'
+            else
+              echo "- (no file list available)"
+            fi
+            echo ""
+            echo "**Commits:**"
+            if [ -n "$COMMITS" ]; then
+              echo "$COMMITS" | sed 's/^/- /'
+            else
+              echo "- (no commits available)"
+            fi
+            echo ""
+            echo "### Notes"
+            echo ""
+            echo "- Generated from PR metadata: title, body, labels, files, commits."
+          } > "$SUMMARY_FILE"
+
+          echo "summary_path=$SUMMARY_FILE" >> $GITHUB_OUTPUT
+        shell: bash
