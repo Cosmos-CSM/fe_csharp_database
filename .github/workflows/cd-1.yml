@@ -76,9 +76,16 @@ jobs:
           set -euo pipefail
 
           BRANCH="${{ github.head_ref }}"
-          echo "Head Branch: $BRANCH"
+          echo "PR head branch: $BRANCH"
 
-          if [[ "$BRANCH" =~ ^vbump[_-]([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z._-]+)?(?:\+[0-9A-Za-z._-]+)?)$ ]]; then
+          # Bash-compatible regex:
+          #  - prefix vbump_ or vbump-
+          #  - capture semver: major.minor.patch
+          #  - optional pre-release starting with - (e.g. -alpha, -rc.1)
+          #  - optional build metadata starting with + (e.g. +build.1)
+          REGEX='^vbump[_-]([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z._-]+)?(\+[0-9A-Za-z._-]+)?)$'
+
+          if [[ $BRANCH =~ $REGEX ]]; then
             BRANCH_VER="${BASH_REMATCH[1]}"
             echo "Extracted version from branch: $BRANCH_VER"
           else
@@ -88,7 +95,7 @@ jobs:
           fi
 
           BASE_VER="${{ steps.base_version.outputs.version }}"
-          echo "Base version: $BASE_VER"
+          echo "Base version from step: $BASE_VER"
 
           if [ "$BRANCH_VER" = "$BASE_VER" ]; then
             echo "Version matches: $BRANCH_VER"
