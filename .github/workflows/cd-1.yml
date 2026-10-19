@@ -71,6 +71,34 @@ jobs:
           VERSION=$(jq -r '.version' base/csmpackage.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Compare Base Version.
+        run: |
+          set -euo pipefail
+
+          BRANCH="${{ github.head_ref }}"
+          echo "Head Branch: $BRANCH"
+
+          if [[ "$BRANCH" =~ ^vbump[_-]([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z._-]+)?(?:\+[0-9A-Za-z._-]+)?)$ ]]; then
+            BRANCH_VER="${BASH_REMATCH[1]}"
+            echo "Extracted version from branch: $BRANCH_VER"
+          else
+            echo "Branch name does not match required pattern: vbump_{version} or vbump-{version}"
+            echo "Examples: vbump_1.2.3, vbump-1.2.3-alpha, vbump_1.2.3+build.1"
+            exit 1
+          fi
+
+          BASE_VER="${{ steps.base_version.outputs.version }}"
+          echo "Base version: $BASE_VER"
+
+          if [ "$BRANCH_VER" = "$BASE_VER" ]; then
+            echo "Version matches: $BRANCH_VER"
+          else
+            echo "Version mismatch: branch has '$BRANCH_VER' but base metadata is '$BASE_VER'"
+            exit 1
+          fi
+        shell: bash 
+          
+
       - name: Read Head version
         id: head_version
         run: |
