@@ -78,14 +78,15 @@ jobs:
 
           echo "Versions bumped correctly"
 
-      - name: Exposing package metadata
+      - name: Expose Package Metadata
         id: package_metadata
-        run: | 
+        run: |
           VERSION=$(jq -r '.version' head/csmpackage.json)
-          PACKAGES=$(jq -c '.packages[]' head/csmpackage.json)
+          PACKAGES_JSON=$(jq -c '.packages' head/csmpackage.json)
 
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+          printf '%s\n' "version=$VERSION" >> $GITHUB_OUTPUT
+          printf '%s\n' "packages=$PACKAGES_JSON" >> $GITHUB_OUTPUT
+
 
   generate_release_docs:
     name: Generate Release Documentation (Release-Notes & Changelog)
