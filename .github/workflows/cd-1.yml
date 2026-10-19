@@ -125,6 +125,7 @@ jobs:
     strategy:
       matrix:
         package: ${{ fromJson(needs.compare-versions.outputs.packages) }}
+    
     steps:
       - name: CheckOut Head branch
         uses: actions/checkout@v3
@@ -231,3 +232,178 @@ jobs:
 
           echo "summary_path=$SUMMARY_FILE" >> $GITHUB_OUTPUT
         shell: bash
+
+      - name: Generate release notes and update CHANGELOG
+        id: gen_docs
+        run: |
+          set -euo pipefail
+
+          PACKAGE="${{ matrix.package }}"
+          VERSION="${{ needs.compare-versions.outputs.version }}"
+          SUMMARY_PATH="${{ steps.pr_summary.outputs.summary_path }}"
+
+          PACKAGE_PATH="$PACKAGE"
+          RELEASE_DIR="$PACKAGE_PATH/release-notes"
+          RELEASE_FILE="$RELEASE_DIR/v${VERSION}.md"
+
+          mkdir -p "$RELEASE_DIR"
+
+          {
+            echo "## Release $VERSION"
+            echo ""
+            if [ -f "$SUMMARY_PATH" ]; then
+              cat "$SUMMARY_PATH"
+            else
+              echo "- No PR summary available."
+            fi
+            echo ""
+          } > "$RELEASE_FILE"
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          if [ -z "$BASE_SHA" ] || [ -z "$HEAD_SHA" ]; then
+            echo "- Unable to determine commit range." >> "$RELEASE_FILE"
+          else
+            if [ "$(git rev-list --count "$BASE_SHA..$HEAD_SHA")" -eq 0 ]; then
+              echo "- No commits detected between base and head." >> "$RELEASE_FILE"
+            else
+              echo "" >> "$RELEASE_FILE"
+              git --no-pager log --pretty=format:"- %s (%an)" "$BASE_SHA..$HEAD_SHA" >> "$RELEASE_FILE"
+            fi
+          fi
+
+          # Ensure CHANGELOG exists at package root
+          CHANGELOG_FILE="$PACKAGE_PATH/CHANGELOG"
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            echo "# Changelog" > "$CHANGELOG_FILE"
+            echo "" >> "$CHANGELOG_FILE"
+          fi
+
+          NEW_ENTRY_FILE="$(mktemp)"
+          {
+            echo "## v${VERSION}"
+            echo ""
+            if [ -f "$SUMMARY_PATH" ]; then
+              cat "$SUMMARY_PATH"
+            else
+              echo "- No PR summary available."
+            fi
+            echo ""
+            echo "### Commits"
+            if [ -n "$HEAD_SHA" ] && [ -n "$BASE_SHA" ]; then
+              git --no-pager log --pretty=format:"- %s (%an)" "$BASE_SHA..$HEAD_SHA"
+            fi
+            echo ""
+          } > "$NEW_ENTRY_FILE"
+
+          # Replace or prepend entry
+          if grep -qE "^## v${VERSION}\b" "$CHANGELOG_FILE"; then
+            awk -v ver="v${VERSION}" -v newfile="$NEW_ENTRY_FILE" '
+              BEGIN {
+                replaced = 0;
+                while ((getline line < newfile) > 0) {
+                  newlines = newlines line "\n"
+                }
+                close(newfile)
+              }
+              {
+                if ($0 ~ "^## " ver "\\b") {
+                  printf "%s", newlines
+                  replaced = 1
+                  while (getline > 0) {
+                    if ($0 ~ "^## v[0-9]+") {
+                      print $0
+                      break
+                    }
+                  }
+                  next
+                }
+                print $0
+              }
+              END {
+              }
+            ' "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.tmp" || true
+
+            if [ -s "${CHANGELOG_FILE}.tmp" ]; then
+              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
+            else
+              cat "$NEW_ENTRY_FILE" "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.tmp"
+              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
+            fi
+          else
+            if head -n1 "$CHANGELOG_FILE" | grep -qE '^#\s+Changelog'; then
+              tail -n +2 "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.body.tmp"
+              { head -n1 "$CHANGELOG_FILE"; echo ""; cat "$NEW_ENTRY_FILE"; echo ""; cat "${CHANGELOG_FILE}.body.tmp"; } > "${CHANGELOG_FILE}.tmp"
+              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
+              rm -f "${CHANGELOG_FILE}.body.tmp"
+            else
+              cat "$NEW_ENTRY_FILE" "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.tmp"
+              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
+            fi
+          fi
+
+          rm -f "$NEW_ENTRY_FILE"
+
+          # Expose whether there are changes to commit
+          if git status --porcelain | grep -q .; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Post release notes as PR comment (works for forks)
+        if: always()
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUM=${{ github.event.pull_request.number }}
+          REPO="${{ github.repository }}"
+          PACKAGE="${{ matrix.package }}"
+          VERSION="${{ needs.compare-versions.outputs.version }}"
+          RELEASE_FILE="${PACKAGE}/release-notes/v${VERSION}.md"
+
+          if [ -f "$RELEASE_FILE" ]; then
+            # Use jq -Rs to safely encode the file content into JSON string
+            BODY_JSON=$(jq -Rs --arg title "Release notes for ${PACKAGE} v${VERSION}" '{body: (. | "\n" + .)}' < "$RELEASE_FILE")
+            curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${REPO}/issues/${PR_NUM}/comments" \
+              -d "$BODY_JSON" > /dev/null || true
+            echo "Posted release notes as PR comment."
+          else
+            echo "Release file not found; skipping PR comment."
+          fi
+        shell: bash
+
+      - name: Commit Generated vdocs (only when PR branch is in same repo)
+        if: steps.gen_docs.outputs.changes == 'true' && (github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          GIT_PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No staged changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Generated vdocs."
+
+          # Ensure remote URL uses token for authentication
+          REPO_URL="$(git remote get-url origin)"
+          AUTH_REMOTE="${REPO_URL/https:\/\/github.com\//https:\/\/${GIT_PUSH_TOKEN}@github.com/}"
+          git remote set-url origin "$AUTH_REMOTE"
+
+          git push origin "HEAD:${TARGET_BRANCH}"
+        shell: bash
+
+      - name: No changes to commit
+        if: steps.gen_docs.outputs.changes == 'false'
+        run: echo "No release docs changes detected; nothing to commit."
