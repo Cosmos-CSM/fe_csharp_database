@@ -4,23 +4,21 @@
 		<Version>$(GitVersion)</Version>
 	    <PackageId>CSharp.Database.Extension</PackageId>
         <RootNamespace>CSharp_Database_Extension</RootNamespace>
+		<RepositoryUrl>https://github.com/Cosmos-CSM/csm_database</RepositoryUrl>
+
+		<TargetFrameworks>net10.0</TargetFrameworks>
 		
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageDescription>A framework extension package for CSM extended utilities related with database management, provide tools to configure easily database models and standard through organization creations.</PackageDescription>
 		
-        <TargetFrameworks>net10.0</TargetFrameworks>
 		<Authors>Renato Urrea</Authors>
 		<Company>Cosmos (CSM)</Company>
-		<RepositoryUrl>https://github.com/Cosmos-CSM/csm_database</RepositoryUrl>
-        <ImplicitUsings>enable</ImplicitUsings>
+		
         <Nullable>enable</Nullable>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageReadmeFile>CHANGELOG.md</PackageReadmeFile>
 		<IsPackable>true</IsPackable>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<None Include="CHANGELOG.md" Pack="true" PackagePath="" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="CSharp.Extension" Version="1.2.5" />
