@@ -143,6 +143,27 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
+      - name: Prevent Looping
+        run: |
+          set -euo pipefail
+
+          AUTO_NAME="github-actions"
+          AUTO_EMAIL="github-actions@github.com"
+          AUTO_COMMIT_MARKER="Generated vdocs."
+
+          last_name=$(git log -1 --pretty=format:'%an')
+          last_email=$(git log -1 --pretty=format:'%ae')
+          last_message=$(git log -1 --pretty=format:'%s')
+
+          echo "Last commit author: $last_name <$last_email>"
+          echo "Last commit message: $last_message"
+
+          if [ "$last_name" = "$AUTO_NAME" ] || [ "$last_email" = "$AUTO_EMAIL" ] || echo "$last_message" | grep -qF "$AUTO_COMMIT_MARKER"; then
+            echo "Skipping generate_release_docs: last commit created by automation."
+            exit 0
+          fi
+        shell: bash
+
       - name: Prepare Package Metadata
         run: |
           echo "PACKAGE='${{ matrix.package }}'"
