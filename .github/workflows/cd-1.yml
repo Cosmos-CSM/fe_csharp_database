@@ -40,8 +40,7 @@ jobs:
             echo "Name matches version bump"
             exit 0
           else
-            echo "Branch name does NOT match required pattern: vbump_{version}"
-            echo "Expected example: vbump_{version}"
+            echo "Wrong source. Expected: vbump_{version}"
             exit 1
           fi
   
