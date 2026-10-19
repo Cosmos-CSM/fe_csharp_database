@@ -168,7 +168,6 @@ jobs:
       - name: Build PR Summary
         id: pr_summary
         run: |
-          |
           set -euo pipefail
 
           PR_NUMBER="${{ github.event.pull_request.number }}"
