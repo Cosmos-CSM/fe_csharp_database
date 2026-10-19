@@ -1,0 +1,119 @@
+name: CD 1
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+
+  validate-source:
+    name: Validate Source Branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prevent Sources
+        run: |
+          set -euo pipefail
+          HEAD_REF="${{ github.head_ref }}"
+          echo "Head Branch: $HEAD_REF"
+
+          if [ "$HEAD_REF" = "dev" ]; then
+            echo "Cannot merge into main from dev branch"
+            exit 1
+          fi
+
+          if [[ "$HEAD_REF" =~ ^vbump_[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._-]+)?$ ]]; then
+            echo "Name matches version bump"
+            exit 0
+          else
+            echo "Wrong source. Expected: vbump_{version}"
+            exit 1
+          fi
+
+  compare-versions:
+    needs: validate-source
+    name: Compare Versions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package_metadata.outputs.version }}
+      packages: ${{ steps.package_metadata.outputs.packages }}
+
+    steps:
+      - name: CheckOut Base
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: base
+
+      - name: CheckOut Head
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          path: head
+
+      - name: Read Base version
+        id: base_version
+        run: |
+          VERSION=$(jq -r '.version' base/csmpackage.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Read Head version
+        id: head_version
+        run: |
+          VERSION=$(jq -r '.version' head/csmpackage.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        run: |
+          set -euo pipefail
+
+          BASE="${{ steps.base_version.outputs.version }}"
+          HEAD="${{ steps.head_version.outputs.version }}"
+          BRANCH="${{ github.head_ref }}"
+          REGEX='^vbump[_-]([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z._-]+)?(\+[0-9A-Za-z._-]+)?)$'
+
+          echo "Base version: $BASE"
+          echo "Head version: $HEAD"
+          echo "Head Branch: $BRANCH"
+
+          if [ "$BASE" = "$HEAD" ]; then
+            echo "Package metadata version isn't bumped"
+            exit 1
+          fi
+
+          if [[ $BRANCH =~ $REGEX ]]; then
+            BRANCH_VER="${BASH_REMATCH[1]}"
+            echo "Extracted version from branch: $BRANCH_VER"
+          else
+            echo "Branch name does not match required pattern: vbump_{version} or vbump-{version}"
+            echo "Examples: vbump_1.2.3, vbump-1.2.3-alpha, vbump_1.2.3+build.1"
+            exit 1
+          fi
+
+          if [ "$BRANCH_VER" = "$HEAD" ]; then
+            echo "Version match"
+          else
+            echo "Version mismatch: branch has '$BRANCH_VER' but metadata is '$HEAD'"
+            exit 1
+          fi
+
+          echo "Versions bumped correctly"
+
+      - name: Expose Package Metadata
+        id: package_metadata
+        run: |
+          VERSION=$(jq -r '.version' head/csmpackage.json)
+          PACKAGES_JSON=$(jq -c '.packages' head/csmpackage.json)
+
+          printf '%s\n' "version=$VERSION" >> $GITHUB_OUTPUT
+          printf '%s\n' "packages=$PACKAGES_JSON" >> $GITHUB_OUTPUT

@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+		<Version>$(GitVersion)</Version>
+		<PackageId>CSharp.Database.Extension.Testing</PackageId>
+        <RootNamespace>CSharp_Database_Extension_Testing</RootNamespace>
+		<RepositoryUrl>https://github.com/Cosmos-CSM/csm_database</RepositoryUrl>
+
+        <TargetFramework>net10.0</TargetFramework>
+		
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<PackageDescription>A framework extension package for CSM extended utilities related with database testing, provide tools to properly and easily test organization database implementations and base expectations.</PackageDescription>
+		
+		<Authors>Renato Urrea</Authors>
+		<Company>Cosmos (CSM)</Company>
+        
+        <Nullable>enable</Nullable>
+		<OutputType>Exe</OutputType>
+		<IsPackable>true</IsPackable>
+		<IsTestProject>false</IsTestProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="xunit.v3" Version="3.2.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\CSharp Database Extension\CSharp Database Extension.csproj" />
+	</ItemGroup>
+
+</Project>
