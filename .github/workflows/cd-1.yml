@@ -1,21 +1,17 @@
 name: CD 1
 
-# This workflow supports the first phase of delvier process, when a PR is opened pointing [main] branch, will trigger validations.
-# First will check if all PR opened to [main] are from [dev].
-# Then will check that package metadata version was bumped correctly.
-
 on:
   workflow_dispatch:
 
   pull_request:
-    branches: 
-        - main
+    branches:
+      - main
     types:
-        - opened
-        - reopened
-        - synchronize
+      - opened
+      - reopened
+      - synchronize
 
-permissions: 
+permissions:
   contents: write
 
 jobs:
@@ -25,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Prevent Sources 
+      - name: Prevent Sources
         run: |
           set -euo pipefail
           HEAD_REF="${{ github.head_ref }}"
@@ -43,17 +39,17 @@ jobs:
             echo "Wrong source. Expected: vbump_{version}"
             exit 1
           fi
-  
-  compare-versions: 
+
+  compare-versions:
     needs: validate-source
-    name: Compare Versions 
+    name: Compare Versions
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.package_metadata.outputs.version }}
       packages: ${{ steps.package_metadata.outputs.packages }}
 
-    steps: 
-      - name: CheckOut Base 
+    steps:
+      - name: CheckOut Base
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.base.ref }}
@@ -70,7 +66,6 @@ jobs:
         run: |
           VERSION=$(jq -r '.version' base/csmpackage.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
 
       - name: Read Head version
         id: head_version
@@ -170,156 +165,32 @@ jobs:
           echo "VERSION='${{ needs.compare-versions.outputs.version }}'"
         shell: bash
 
-      - name: Generate release notes and update CHANGELOG
-        id: gen_docs
+      - name: Build PR Summary
+        id: pr_summary
         run: |
           set -euo pipefail
 
-          PACKAGE="${{ matrix.package }}"
-          VERSION="${{ needs.compare-versions.outputs.version }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          TOKEN="${{ secrets.GITHUB_TOKEN }}"
 
-          # Derive package path (preserve full path if matrix.package is a path)
-          PACKAGE_PATH="$PACKAGE"
-          # If matrix.package contains a repo-like "dir/subdir", keep it as-is.
-          # Release notes directory and file
-          RELEASE_DIR="$PACKAGE_PATH/release-notes"
-          RELEASE_FILE="$RELEASE_DIR/v${VERSION}.md"
+          echo "Fetching PR metadata for #$PR_NUMBER"
 
-          echo "Package path: $PACKAGE_PATH"
-          echo "Release notes file: $RELEASE_FILE"
+          PR_DATA=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER")
 
-          mkdir -p "$RELEASE_DIR"
+          TITLE=$(echo "$PR_DATA" | jq -r '.title // "No title"')
+          BODY=$(echo "$PR_DATA" | jq -r '.body // "No description provided."')
+          AUTHOR=$(echo "$PR_DATA" | jq -r '.user.login // "unknown"')
+          LABELS=$(echo "$PR_DATA" | jq -r '[.labels[].name] | join(", ") // empty')
+          FILES_JSON=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/pulls/$PR_NUMBER/files")
+          FILES=$(echo "$FILES_JSON" | jq -r '.[].filename' || true)
 
-          # Build release notes content
-          {
-            echo "## Release $VERSION"
-            echo ""
-            echo "### Commits included"
-            echo ""
-          } > "$RELEASE_FILE"
-
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-
-          if [ -z "$BASE_SHA" ] || [ -z "$HEAD_SHA" ]; then
-            echo "- Unable to determine commit range." >> "$RELEASE_FILE"
-          else
-            # If there are no commits in range, note it; otherwise list commits
-            if [ "$(git rev-list --count "$BASE_SHA..$HEAD_SHA")" -eq 0 ]; then
-              echo "- No commits detected between base and head." >> "$RELEASE_FILE"
-            else
-              git --no-pager log --pretty=format:"- %s (%an)" "$BASE_SHA..$HEAD_SHA" >> "$RELEASE_FILE"
-            fi
-          fi
-
-          echo "Wrote release notes to $RELEASE_FILE"
-
-          # Ensure CHANGELOG exists at package root
-          CHANGELOG_FILE="$PACKAGE_PATH/CHANGELOG"
-          if [ ! -f "$CHANGELOG_FILE" ]; then
-            echo "Creating new CHANGELOG at $CHANGELOG_FILE"
-            echo "# Changelog" > "$CHANGELOG_FILE"
-            echo "" >> "$CHANGELOG_FILE"
-          fi
-
-          # Prepare new changelog entry content (you can customize the header/body format)
-          NEW_ENTRY_FILE="$(mktemp)"
-          {
-            echo "## v${VERSION}"
-            echo ""
-            echo "### Release notes"
-            echo ""
-            # Insert the same commit list into the changelog entry
-            sed -n '1,200000p' "$RELEASE_FILE" | sed '1,2d'  # skip the top two lines already added above
-            echo ""
-          } > "$NEW_ENTRY_FILE"
-
-          # Replace existing entry for this version if present, otherwise prepend new entry after top header
-          # We treat entries as starting with a line that matches '^## v<version>'
-          if grep -qE "^## v${VERSION}\b" "$CHANGELOG_FILE"; then
-            echo "Found existing CHANGELOG entry for v${VERSION}, replacing it."
-            # Use awk to replace the section starting at "## vVERSION" up to the next "## v" or EOF
-            awk -v ver="v${VERSION}" -v newfile="$NEW_ENTRY_FILE" '
-              BEGIN {
-                replaced = 0;
-                while ((getline line < newfile) > 0) {
-                  newlines = newlines line "\n"
-                }
-                close(newfile)
-              }
-              {
-                if ($0 ~ "^## " ver "\\b") {
-                  # print newlines and skip until next "## v" or EOF
-                  printf "%s", newlines
-                  replaced = 1
-                  # skip lines until next "## v" header
-                  while (getline > 0) {
-                    if ($0 ~ "^## v[0-9]+") {
-                      print $0
-                      break
-                    }
-                  }
-                  next
-                }
-                print $0
-              }
-              END {
-                if (replaced == 0) {
-                  # no replacement happened; print nothing here (caller will handle prepend)
-                }
-              }
-            ' "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.tmp" || true
-
-            # If awk produced a tmp file with content, move it back; otherwise fall back to prepend
-            if [ -s "${CHANGELOG_FILE}.tmp" ]; then
-              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
-            else
-              # fallback: prepend
-              cat "$NEW_ENTRY_FILE" "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.tmp"
-              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
-            fi
-          else
-            echo "No existing entry for v${VERSION}. Prepending new entry to CHANGELOG."
-            # Prepend new entry after the top-level header if present, otherwise at top
-            # If file starts with "# Changelog", keep it and insert after that header
-            if head -n1 "$CHANGELOG_FILE" | grep -qE '^#\s+Changelog'; then
-              # keep header line, then insert new entry
-              tail -n +2 "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.body.tmp"
-              { head -n1 "$CHANGELOG_FILE"; echo ""; cat "$NEW_ENTRY_FILE"; echo ""; cat "${CHANGELOG_FILE}.body.tmp"; } > "${CHANGELOG_FILE}.tmp"
-              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
-              rm -f "${CHANGELOG_FILE}.body.tmp"
-            else
-              # no top header, just prepend
-              cat "$NEW_ENTRY_FILE" "$CHANGELOG_FILE" > "${CHANGELOG_FILE}.tmp"
-              mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
-            fi
-          fi
-
-          rm -f "$NEW_ENTRY_FILE"
-
-          echo "Updated CHANGELOG at $CHANGELOG_FILE"
-
-          # Expose whether there are changes to commit
-          if git status --porcelain | grep -q .; then
-            echo "changes=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changes=false" >> "$GITHUB_OUTPUT"
-          fi
-        shell: bash
-    
-      - name: Commit Generated vdocs
-        if: steps.gen_docs.outputs.changes == 'true'
-        run: |
-          set -euo pipefail
-          git add -A
-          # Use exact commit title requested
-          git commit -m "Generated vdocs."
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
-          echo "Pushed commit 'Generated vdocs.' to branch ${{ github.event.pull_request.head.ref }}"
-        shell: bash
-
-      - name: No changes to commit
-        if: steps.gen_docs.outputs.changes == 'false'
-        run: echo "No release docs changes detected; nothing to commit."
-
-    
+          COMMITS_JSON=$(curl -s \
+            -H "Authorization: Bearer $TOKEN" \
+            -
