@@ -82,7 +82,7 @@ jobs:
         id: package_metadata
         run: | 
           VERSION=$(jq -r '.version' head/csmpackage.json)
-          PACKAGES=$(jq -r '.packages[]' head/csmpackage.json)
+          PACKAGES=$(jq -c '.packages[]' head/csmpackage.json)
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
