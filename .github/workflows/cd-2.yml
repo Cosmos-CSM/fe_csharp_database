@@ -102,7 +102,7 @@ jobs:
         run: |
           dotnet build \
             -c Release \
-            -p:Version=${{ needs.read_metadata.outputs.version }}
+            -p:Version=${{ needs.read_metadata.outputs.version }} \
             -p:PackageVersion=${{ needs.read_metadata.outputs.version }} \
           
       - name: Pack
