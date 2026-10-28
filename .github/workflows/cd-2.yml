@@ -135,3 +135,21 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/**/*.nupkg
+
+  tag_cleanup:
+    needs:
+      - read_metadata
+      - create_tag
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete Tag
+        run: |
+          TAG=v${{ needs.read_metadata.outputs.version }}
+
+          git push --delete origin $TAG || true
