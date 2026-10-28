@@ -128,7 +128,7 @@ jobs:
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.PUBLISH_PAT }}
         run: |
-          dotnet nuget push "${{ github.workspace }}/artifacts" \
+          dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" \
             --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
             --api-key $NUGET_AUTH_TOKEN \
             --skip-duplicate
