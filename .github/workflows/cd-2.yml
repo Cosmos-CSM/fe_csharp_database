@@ -68,6 +68,10 @@ jobs:
     needs: read_metadata
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      packages: write
+
     strategy:
       matrix:
         package: ${{ fromJson(needs.read_metadata.outputs.packages) }}
@@ -113,7 +117,22 @@ jobs:
             -p:PackageVersion=${{ needs.read_metadata.outputs.version }} \
             -p:Version=${{ needs.read_metadata.outputs.version }} \
             -o ${{ github.workspace }}/artifacts
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ strategy.job-index }}
+          path: ${{ github.workspace }}/artifacts/*.nupkg
          
+      - name: Push to GitHub Packages
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.PUBLISH_PAT }}
+        run: |
+          dotnet nuget push "${{ github.workspace }}/artifacts" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --api-key $NUGET_AUTH_TOKEN \
+            --skip-duplicate
+      
   create_release: 
     needs: 
       - read_metadata
@@ -141,7 +160,7 @@ jobs:
       - read_metadata
       - create_release
     if: ${{ always() && needs.create_release.result == 'failure' }}
-    
+
     runs-on: ubuntu-latest
     permissions:
       contents: write
