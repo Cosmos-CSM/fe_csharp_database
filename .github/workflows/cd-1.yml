@@ -1,5 +1,9 @@
 name: CD 1
 
+# This is the first part of a delivery workflow. This action 
+# is responsible for check if the version bump is correctly configured and ready to be
+# published.
+
 on:
   workflow_dispatch:
 

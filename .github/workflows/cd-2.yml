@@ -1,0 +1,117 @@
+name: CD 2
+
+# This is the second part of a delivery workflow. 
+# This action handles all release process, creates github tag, release, and packs the binaries.
+
+on: 
+  workflow_dispatch:
+
+  push:
+    branches: 
+      - main
+
+jobs:
+  read_metadata:
+    name: Read Package Metadata
+    runs-on: ubuntu-latest
+
+    outputs: 
+      version: ${{ steps.metadata.outputs.version }}
+      packages: ${{ steps.metadata.outputs.packages }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read Metadata
+        id: metadata
+        run: |
+          VERSION=$(jq -r '.version' cmfpackage.json)
+          PACKAGES=$(jq -c '.packages' cmfpackage.json)
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+
+          echo "Version: $VERSION"
+          echo "Packages: $PACKAGES"
+  
+  create_tag: 
+    needs: read_metadata
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs: 
+      tag: ${{ steps.tag.outputs.tag }}
+
+    steps: 
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: |
+          TAG="v${{ needs.read_metadata.outputs.version }}"
+
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag ($TAG) already exists"
+            exit 0
+          fi
+
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+  release_packages:
+    needs: read_metadata
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.read_metadata.outputs.packages) }}
+
+    steps: 
+      - uses: actions/checkout@v4
+
+      - name: Display Package Info
+        run: |
+          echo "Version: ${{ needs.read_metadata.outputs.version }}"
+          echo "Package: ${{ matrix.package }}"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Pack
+        working-directory: ${{ matrix.package }}
+        run: |
+          dotnet pack \
+            -c Release \
+            -p:PackageVersion=${{ needs.read_metadata.outputs.version }} \ 
+            -p:Version=${{ needs.read_metadata.outputs.version }} \
+            -o ${{ github.workspace }} artifacts
+         
+
+  create_release: 
+    needs: 
+      - read_metadata
+      - create_tag
+      - release_packages
+    runs-on: ubuntu-latest
+
+    permissions: 
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.read_metadata.outputs.version }}
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.nupkg
