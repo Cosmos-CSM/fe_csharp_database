@@ -97,6 +97,14 @@ jobs:
         working-directory: ${{ matrix.package }}
         run: dotnet restore
 
+      - name: Build Package
+        working-directory: ${{ matrix.package }}
+        run: |
+          dotnet build \
+            -c Release \
+            -p:Version=${{ needs.read_metadata.outputs.version }}
+            -p:PackageVersion=${{ needs.read_metadata.outputs.version }} \
+          
       - name: Pack
         working-directory: ${{ matrix.package }}
         run: |
