@@ -89,11 +89,10 @@ jobs:
         run: |
           dotnet pack \
             -c Release \
-            -p:PackageVersion=${{ needs.read_metadata.outputs.version }} \ 
+            -p:PackageVersion=${{ needs.read_metadata.outputs.version }} \
             -p:Version=${{ needs.read_metadata.outputs.version }} \
-            -o ${{ github.workspace }} artifacts
+            -o ${{ github.workspace }}/artifacts
          
-
   create_release: 
     needs: 
       - read_metadata
