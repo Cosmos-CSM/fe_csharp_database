@@ -139,8 +139,9 @@ jobs:
   tag_cleanup:
     needs:
       - read_metadata
-      - create_tag
-    if: failure()
+      - create_release
+    if: ${{ always() && needs.create_release.result == 'failure' }}
+    
     runs-on: ubuntu-latest
     permissions:
       contents: write
