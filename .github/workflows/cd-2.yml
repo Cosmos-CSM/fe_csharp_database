@@ -91,7 +91,7 @@ jobs:
             --password ${{ secrets.GITHUB_TOKEN }} \
             --store-password-in-clear-text \
             --name github \
-            https://nuget.pkg.github.com/YOUR_ORG/index.json
+            https://nuget.pkg.github.com/Cosmos-CSM/index.json
 
       - name: Restore Package
         working-directory: ${{ matrix.package }}
