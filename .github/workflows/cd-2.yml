@@ -25,8 +25,8 @@ jobs:
       - name: Read Metadata
         id: metadata
         run: |
-          VERSION=$(jq -r '.version' cmfpackage.json)
-          PACKAGES=$(jq -c '.packages' cmfpackage.json)
+          VERSION=$(jq -r '.version' csmpackage.json)
+          PACKAGES=$(jq -c '.packages' csmpackage.json)
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
