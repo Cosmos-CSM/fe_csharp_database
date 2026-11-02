@@ -29,7 +29,7 @@ public abstract partial class DatabaseBase<TDatabase>
     public virtual string Signature { get; protected set; } = "";
 
     /// <inheritdoc/>
-    public virtual DatabaseProviders Provider { get; protected set; } = DatabaseProviders.PostgreSQL;
+    public virtual DatabaseProviders Provider { get; protected set; } = DatabaseProviders.PostgresSQL;
 
     /// <summary>
     ///     Database model options.
@@ -140,6 +140,7 @@ public abstract partial class DatabaseBase<TDatabase>
     /// <inheritdoc/>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
         string connectionString = Options.ConnectionOptions!.ConnectionString;
+        string databaseProject = GetType().Assembly.GetName().Name!; 
 
         switch (Options.Provider) {
             case DatabaseProviders.SQLServer:
@@ -147,17 +148,24 @@ public abstract partial class DatabaseBase<TDatabase>
                         connectionString,
                         builder => {
                             if (Options.Migrations is not null) {
-                                builder.MigrationsAssembly(Options.Migrations);
+
+                                if(Options.Migrations != null)
+                                    builder.MigrationsAssembly(Options.Migrations);
+                                else 
+                                    builder.MigrationsAssembly($"{databaseProject}.{DatabaseProviders.SQLServer}");
                             }
                         }
                     );
                 break;
-            case DatabaseProviders.PostgreSQL:
+            case DatabaseProviders.PostgresSQL:
                 optionsBuilder.UseNpgsql(
                         connectionString,
                         builder => {
                             if(Options.Migrations is not null) {
-                                builder.MigrationsAssembly(Options.Migrations);
+                                if (Options.Migrations != null)
+                                    builder.MigrationsAssembly(Options.Migrations);
+                                else
+                                    builder.MigrationsAssembly($"{databaseProject}.{DatabaseProviders.PostgresSQL}");
                             }
                         }
                     );
@@ -297,7 +305,7 @@ public abstract partial class DatabaseBase<TDatabase>
         Options.Signature ??= Signature;
 
         // When current options provider is the default one.
-        if (Options.Provider == DatabaseProviders.PostgreSQL) {
+        if (Options.Provider == DatabaseProviders.PostgresSQL) {
             Options.Provider = Provider;
         }
 
