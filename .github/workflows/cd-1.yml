@@ -121,3 +121,61 @@ jobs:
 
           printf '%s\n' "version=$VERSION" >> $GITHUB_OUTPUT
           printf '%s\n' "packages=$PACKAGES_JSON" >> $GITHUB_OUTPUT
+
+  integration-tests:
+    needs: validate-source
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_VERSION: ${{ vars.DOTNET_VERSION || '10.0.x' }}
+      SOLUTION_PATH: ${{ vars.SOLUTION_PATH }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Configure GitHub packages
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.PUBLISH_PAT }}
+        run: |
+          dotnet nuget add source \
+            "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --name github \
+            --username "${{ github.actor }}" \
+            --password "$NUGET_AUTH_TOKEN" \
+            --store-password-in-clear-text
+
+      - name: Resolve RunSettings
+        id: runsettings
+        shell: bash
+        run: |
+          RUNSETTINGS="${{ vars.ITESTS_RUNSETTINGS_PATH }}"
+
+          if [ -n "$RUNSETTINGS" ] && [ -f "$RUNSETTINGS" ]; then
+            echo "Using repository RunSettings: $RUNSETTINGS"
+
+            echo "path=$RUNSETTINGS" >> $GITHUB_OUTPUT
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Repository RunSettings not found"
+
+          EOF
+            echo "path=$GENERATED" >> $GITHUB_OUTPUT
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Setup Databases
+        if: steps.runsettings.outputs.exists == 'false'
+        working-directory: ${{ env.SOLUTION_PATH }}
+        run: |
+          dotnet tool install --global csm_devkit
+
+
+      - name: Run integration tests
+        working-directory: ${{ env.SOLUTION_PATH }}/Integration Tests/
+        run: |
+          dotnet test --configuration Release --verbosity normal

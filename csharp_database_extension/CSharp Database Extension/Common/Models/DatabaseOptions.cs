@@ -25,7 +25,7 @@ public partial record DatabaseOptions<TDatabase>
     /// <summary>
     ///     Database provider.
     /// </summary>
-    public DatabaseProviders Provider { get; set; } = DatabaseProviders.PostgreSQL;
+    public DatabaseProviders Provider { get; set; } = DatabaseProviders.PostgresSQL;
 
     /// <summary>
     ///     Whether the logging service is enabled.

@@ -13,5 +13,5 @@ public enum DatabaseProviders {
     /// <summary>
     ///     Represents a PostgreSQL database provider.
     /// </summary>
-    PostgreSQL,
+    PostgresSQL,
 }
